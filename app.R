@@ -23,7 +23,7 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             textInput("dsnTaskTxt", "Task",
-                      "AGATATTCCAACGTGCAAGTGGCTGGACCAGTG(G>A)ACAGAACTAGCTCAAAGGTATGTCCTAAATTAAATATAAGT"),
+                      "AGATATTCCAACGTGCAAGTGGCTGGACCAGTG(G>)ACAGAACTAGCTCAAAGGTATGTCCTAAATTAAATATAAGT"),
             sliderInput("probeMinMaxLength", "Probes Length", 
                         5, 40, c(15, 30)),
             sliderInput("probeMinMaxTm", "Probes Tm", 
@@ -53,18 +53,23 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     MAX_DELTA_TM_FACTOR <- 0.8
+    DEL_INS_PENALTY_TM <- 10
     complement <- function(ntseq) chartr("ATGCatgc", "TACGtacg", ntseq)
     reverse <- function(ntseq) stringi::stri_reverse(ntseq)
     
     probes <- reactive({
         dsnTask <- toupper(input$dsnTaskTxt)
-        dsnTaskParsed <- as.vector(str_match(dsnTask, "([ATGC]*)\\(([ATGC])+>([ATGC]+)\\)([ATGC]*)"))
-        snpPosition <- str_locate(dsnTask, "\\([ATGC]+>[ATGC]+\\)")[1, "start"]
+        dsnTaskParsed <- as.vector(str_match(dsnTask, "([ATGC]+)\\(([ATGC]*)>([ATGC]*)\\)([ATGC]+)"))
+        snpPosition <- str_locate(dsnTask, "\\([ATGC]*>[ATGC]*\\)")[1, "start"]
         
         flankSeq5 <- tolower(dsnTaskParsed[2])
         wtAllele <- toupper(dsnTaskParsed[3])
+        wtAlleleL <- str_length(wtAllele)
         mAllele <- toupper(dsnTaskParsed[4])
+        mAlleleL <- str_length(mAllele)
         flankSeq3 <- tolower(dsnTaskParsed[5])
+        
+        delInsType <- (wtAlleleL - mAlleleL) != 0
         
         wtSeq <- paste0(flankSeq5, wtAllele, flankSeq3)
         wtSeqL <- str_length(wtSeq)
@@ -86,18 +91,19 @@ server <- function(input, output) {
         
         calcProbes <- function(wtSeq, mSeq, probesOrientation) {
             if (probesOrientation == "B")
-                snpPosition <- wtSeqL - snpPosition + 1
+                snpPosition <- wtSeqL - snpPosition - wtAlleleL + 1
             probes <- 
-                data.table(probeStart = 
-                               rep(seq(snpPosition - input$probeMinMaxLength[2] +
-                                           input$probeMinFlank,
-                                       snpPosition - input$probeMinFlank + 1),
-                                   each = length(probeLengthRange)
-                               )
+                data.table(
+                    probeStart = 
+                        rep(seq(snpPosition - input$probeMinMaxLength[2] +
+                                    input$probeMinFlank + wtAlleleL,
+                                snpPosition - input$probeMinFlank + 1),
+                            each = length(probeLengthRange)
+                        )
                 )[
                     , probeStop := probeStart + probeLengthRange, by = probeStart
                     ][
-                        probeStop > snpPosition + input$probeMinFlank
+                        probeStop > snpPosition + input$probeMinFlank + (wtAlleleL - 1)
                         ][
                             , probeL := probeStop - probeStart + 1
                             ]
@@ -113,12 +119,14 @@ server <- function(input, output) {
                             ][
                                 , probe_m_comp := 
                                     complement(str_sub(mSeq, probeStart, probeStop))
-                                ][
-                                    , mTm := Tm_NN(probe, comSeq = probe_m_comp),
-                                    by = 1:length(probe)
-                                    ][
-                                        , deltaTm := wtTm - mTm
-                                        ]
+                                ]
+            if (delInsType)
+                probes[, mTm := wtTm - DEL_INS_PENALTY_TM]
+            else
+                probes[, mTm := Tm_NN(probe, comSeq = probe_m_comp),
+                       by = 1:length(probe)
+                       ]
+            probes[ , deltaTm := wtTm - mTm]
             colnames(probes) <- paste(colnames(probes), probesOrientation, sep = "_")
             probes
         }
