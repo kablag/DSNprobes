@@ -23,7 +23,7 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             textInput("dsnTaskTxt", "Task",
-                      "AGATATTCCAACGTGCAAGTGGCTGGACCAGTG(G>)ACAGAACTAGCTCAAAGGTATGTCCTAAATTAAATATAAGT"),
+                      "AGATATTCCAACGTGCAAGTGGCTGGACCAGTG(G>A)ACAGAACTAGCTCAAAGGTATGTCCTAAATTAAATATAAGT"),
             sliderInput("probeMinMaxLength", "Probes Length", 
                         5, 40, c(15, 30)),
             sliderInput("probeMinMaxTm", "Probes Tm", 
