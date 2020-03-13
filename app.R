@@ -1,25 +1,12 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(TmCalculator)
 library(stringr)
 library(magrittr)
 library(data.table)
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
-
-    # Application title
     titlePanel("DSN Probes"),
     
-    # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
             textInput("dsnTaskTxt", "Task",
@@ -42,7 +29,6 @@ ui <- fluidPage(
             )
         ),
 
-        # Show a plot of the generated distribution
         mainPanel(
             tabsetPanel(
                 tabPanel("Text Output",
@@ -56,7 +42,6 @@ ui <- fluidPage(
     )
 )
 
-# Define server logic required to draw a histogram
 server <- function(input, output) {
     MAX_DELTA_TM_FACTOR <- 0.8
     DEL_INS_PENALTY_TM <- 10
@@ -242,7 +227,7 @@ server <- function(input, output) {
         DT::datatable(
             data = dat,
             extensions = 'Buttons',
-            options = list(#paging = FALSE,
+            options = list(paging = FALSE,
                            dom = 'Bfrtip',
                            buttons = c('copy', 'csv', 'excel')),
             selection = "single"
@@ -255,5 +240,4 @@ server <- function(input, output) {
     })
 }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
