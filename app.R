@@ -87,12 +87,12 @@ server <- function(input, output) {
                 data.table(
                     probeStart = 
                         rep(seq(snpPosition - input$probeMinMaxLength[2] +
-                                    input$probeMinFlank + wtAlleleL,
-                                snpPosition - input$probeMinFlank + 1),
+                                    input$probeMinFlank + wtAlleleL - 1,
+                                snpPosition - input$probeMinFlank - 1),
                             each = length(probeLengthRange)
                         )
                 )[
-                    , probeStop := probeStart + probeLengthRange, by = probeStart
+                    , probeStop := probeStart + probeLengthRange - 1, by = probeStart
                     ][
                         probeStop > snpPosition + input$probeMinFlank + (wtAlleleL - 1)
                         ][
